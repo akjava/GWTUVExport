@@ -190,8 +190,12 @@ public class GWTUVExport implements EntryPoint {
 			MeshPhongMaterial  phong=materials.get(index).cast();
 			String hex=phong.getColor().getHexString();
 			context.setFillStyle("#"+hex);
-			
 			context.setStrokeStyle("#"+hex);
+			if(phong.isTransparent()){
+				context.setGlobalAlpha(phong.getOpacity());
+			}else{
+				context.setGlobalAlpha(1);
+			}
 			context.fill();
 			messageLabel.setText("");
 			}else{
@@ -204,6 +208,7 @@ public class GWTUVExport implements EntryPoint {
 			}
 			
 		}
+		context.setGlobalAlpha(1);//can restore?
 		canvas.getContext2d().restore();
 		
 	}
