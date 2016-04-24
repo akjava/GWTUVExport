@@ -9,7 +9,7 @@ I'm going to use the image for create my own texture.
 
 I'm not familiar with Blender and Python,that's why i made this with GWT/java.
 
-![http://akjava.github.io/GWTUVExport/imgs/filled_uv.png]()
+![](http://akjava.github.io/GWTUVExport/imgs/filled_uv.png)
 
 Only Tested Chrome.
 ##Known problems
