@@ -1,6 +1,8 @@
 package com.akjava.gwt.uvexport.client;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
@@ -15,10 +17,16 @@ import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader.JSONLoadHandler;
 import com.akjava.gwt.three.client.js.materials.Material;
 import com.akjava.gwt.three.client.js.materials.MeshPhongMaterial;
+import com.akjava.gwt.three.client.js.math.Color;
 import com.akjava.gwt.three.client.js.math.Vector2;
+import com.akjava.lib.common.utils.ColorUtils;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
+import com.google.gwt.canvas.dom.client.Context2d.LineCap;
+import com.google.gwt.canvas.dom.client.Context2d.LineJoin;
+import com.google.gwt.canvas.dom.client.ImageData;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.core.client.Scheduler;
@@ -42,6 +50,7 @@ public class GWTUVExport implements EntryPoint {
 	private double size;
 	private VerticalPanel container;
 	private Label messageLabel;
+	private double strokeSize=1;
 
 	/**
 	 * This is the entry point method.
@@ -96,6 +105,43 @@ public class GWTUVExport implements EntryPoint {
 		});
 		panel.add(sizeListBox);
 		
+		List<Double> sizes=Lists.newArrayList();
+		for(double i=1;i<=32;i+=1){
+			sizes.add(i);
+		}
+		
+		panel.add(new Label("stroke-size:"));
+		ValueListBox<Double> storokeSizeListBox=new ValueListBox<Double>(new Renderer<Double>() {
+
+			@Override
+			public String render(Double object) {
+				if(object!=null){
+					return String.valueOf(object);
+				}
+				return null;
+			}
+
+			@Override
+			public void render(Double object, Appendable appendable) throws IOException {
+				
+			}
+		});
+		storokeSizeListBox.setValue(1.0);//extend because remove antialias
+		storokeSizeListBox.setAcceptableValues(sizes);
+		storokeSizeListBox.addValueChangeHandler(new ValueChangeHandler<Double>() {
+			
+			@Override
+			public void onValueChange(ValueChangeEvent<Double> event) {
+				strokeSize=event.getValue();
+				if(lastGeometry!=null){
+					CanvasUtils.clear(canvas);
+					drawUV(lastGeometry,lastMaterials);
+				}
+			}
+		});
+		panel.add(storokeSizeListBox);
+		
+		
 		
 		messageLabel = new Label();
 		root.add(messageLabel);
@@ -104,6 +150,7 @@ public class GWTUVExport implements EntryPoint {
 		container.add(createCanvas());
 		root.add(container);
 		
+		//TODO mix option and set that default
 		
 		/* for test
 		Scheduler.get().scheduleDeferred(new ScheduledCommand() {
@@ -147,13 +194,137 @@ public class GWTUVExport implements EntryPoint {
 		return size*(1.0-y);
 	}
 	
-	private void drawUV(Geometry geometry,@Nullable JsArray<Material> materials) {
+	private void drawUV(Geometry geometry,final @Nullable JsArray<Material> materials) {
+		drawUV(geometry,materials,strokeSize);
+		drawUV(geometry,materials,1);
+		
+		/*
+		if(materials!=null){
+		Scheduler.get().scheduleEntry(new ScheduledCommand() {
+			
+			@Override
+			public void execute() {
+				fixColors(materials);
+				LogUtils.log("fix");
+			}
+		});
+		}
+		*/
+	}
+	
+	private int[] materialToRgb(Material material){
+		int[] result=new int[3];
+		Color color=material.gwtGetColor();
+		result[0]=(int) (color.getR()*255);
+		result[1]=(int) (color.getG()*255);
+		result[2]=(int) (color.getB()*255);
+		return result;
+	}
+	
+	private int[] findClosest(int r,int g,int b,List<int[]> colors){
+		int[] result=colors.get(0);
+		double[] luv=LuvUtils.toLab(r, g,b);
+		double l=luv[0];
+		double u=luv[1];
+		double v=luv[2];
+		
+		int[] rgb=colors.get(0);
+		double[] color=toLuv(colors.get(0));
+		double minlength=ColorUtils.getColorLength(l, u, v, color[0], color[1], color[2]);
+		
+		for(int i=1;i<colors.size();i++){
+			rgb=colors.get(i);
+			color=toLuv(colors.get(i));
+			double length=ColorUtils.getColorLength(l, u, v, color[0], color[1], color[2]);
+			if(length<minlength){
+				minlength=length;
+				result=rgb;
+			}
+		}
+		
+		return result;
+	}
+	
+	
+	Map<String,double[]> luvMap=Maps.newHashMap();
+	private double[] toLuv(int[] rgb) {
+		String key=rgb[0]+","+rgb[1]+rgb[2];
+		double[] result=luvMap.get(key);
+		if(result==null){
+		result=LuvUtils.toLab(rgb[0], rgb[1], rgb[2]);
+		luvMap.put(key, result);
+		}
+		return result;
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	private void fixColors(JsArray<Material> materials) {
+		
+		//convert color
+		List<int[]> colors=Lists.newArrayList();
+		for(int i=0;i<materials.length();i++){
+			colors.add(materialToRgb(materials.get(i)));
+		}
+		
+		ImageData imageData=CanvasUtils.getImageData(canvas);
+		for(int x=0;x<imageData.getWidth();x++){
+			for(int y=0;y<imageData.getHeight();y++){
+				//kill antialiase
+				int alpha=imageData.getAlphaAt(x, y);
+				if(alpha!=255 && alpha!=0){
+					if(alpha<128){
+						imageData.setAlphaAt(0, x, y);
+						alpha=0;
+					}else{
+						imageData.setAlphaAt(255, x, y);
+					}	
+				}
+				
+				if(alpha==0){
+					continue;
+				}
+				
+				/*
+				int red=imageData.getRedAt(x, y);
+				int green=imageData.getGreenAt(x, y);
+				int blue=imageData.getBlueAt(x, y);
+				
+				int[] rgb=findClosest(red,green,blue,colors);
+				if(red!=rgb[0]){
+					imageData.setRedAt(rgb[0], x, y);
+				}
+				if(green!=rgb[1]){
+					imageData.setGreenAt(rgb[1], x, y);
+					
+				}
+				if(blue!=rgb[2]){
+					imageData.setBlueAt(rgb[2], x, y);
+				}
+				*/
+			}
+		}
+		
+		canvas.getContext2d().putImageData(imageData, 0, 0);
+	}
+
+
+	private void drawUV(Geometry geometry,@Nullable JsArray<Material> materials,double storokeSize) {
 		//TODO support null;
+		
+		
 		
 		Context2d context=canvas.getContext2d();
 		//LogUtils.log(geometry.getFaces().length());
 		
+		
 		canvas.getContext2d().save();
+		context.setLineCap(LineCap.ROUND);
+		context.setLineJoin(LineJoin.ROUND);
+		
+		context.setLineWidth(storokeSize);//some edget problem
+		
 		//LogUtils.log(geometry.getFaceVertexUvs().length());
 		for(int uvAt=0;uvAt<geometry.getFaceVertexUvs().length();uvAt++){//usually single
 			
@@ -210,6 +381,6 @@ public class GWTUVExport implements EntryPoint {
 		}
 		context.setGlobalAlpha(1);//can restore?
 		canvas.getContext2d().restore();
-		
+		LogUtils.log("draw");
 	}
 }
