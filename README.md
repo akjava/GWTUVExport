@@ -23,7 +23,13 @@ actually Meshfacematerial can do beter things,however Meshfacematerial is slow.u
 ###Model size problem
 maybe can not handle too big files.
 ###Edge remaining problem
-this is not complete filled.some edge seems problem.you should extend area by yourself
+when texture is not complete filled(remaining some transparent area).some edge seems problem.you should extend area by yourself
+
+default THREE.LinearMipMapLinearFilter is really not good at viewing from far.
+
+use  minFilter = THREE.NearestFilter
+
+
 
 
 
