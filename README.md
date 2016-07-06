@@ -14,6 +14,8 @@ I'm not familiar with Blender and Python,that's why i made this with GWT/java.
 ![](http://akjava.github.io/GWTUVExport/imgs/filled_uv.png)
 
 Only Tested Chrome.
+
+actually Meshfacematerial can do beter things,however Meshfacematerial is slow.using single texture is fastest.
 ##Known problems
 ###Color problem
 [Materials from Blender to Three.JS: Colors seem to be different](http://blender.stackexchange.com/questions/34728/materials-from-blender-to-three-js-colors-seem-to-be-different)
