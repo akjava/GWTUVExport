@@ -1,6 +1,7 @@
 GWTUVExport
 ==================
 `Apache 2.0 License`
+##[Demo](http://akjava.github.io/GWTUVExport/war/GWTUVExport.html)
 
 ##what is this?
 for three.js json model
@@ -24,5 +25,5 @@ maybe can not handle too big files.
 ###Edge remaining problem
 this is not complete filled.some edge seems problem.you should extend area by yourself
 
-##[Demo](http://akjava.github.io/GWTUVExport/war/GWTUVExport.html)
+
 
